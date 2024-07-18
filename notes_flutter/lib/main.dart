@@ -1,6 +1,27 @@
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:notes_client/notes_client.dart';
 import 'package:flutter/material.dart';
+import 'package:notes_flutter/utils/router.config.dart';
 import 'package:serverpod_flutter/serverpod_flutter.dart';
+
+class RiverpodLogger extends ProviderObserver {
+  @override
+  void didUpdateProvider(
+    ProviderBase<Object?> provider,
+    Object? previousValue,
+    Object? newValue,
+    ProviderContainer container,
+  ) {
+    debugPrint('''
+RIVERPOD>>
+{
+  "provider": "${provider.name ?? provider.runtimeType}",
+  "oldValue": "$previousValue",
+  "newValue": "$newValue"
+}''');
+  }
+}
 
 // Sets up a singleton client object that can be used to talk to the server from
 // anywhere in our app. The client is generated from your server code.
@@ -10,132 +31,105 @@ import 'package:serverpod_flutter/serverpod_flutter.dart';
 var client = Client('http://$localhost:8080/')
   ..connectivityMonitor = FlutterConnectivityMonitor();
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: '.env');
+  // KakaoSdk.init(
+  //   nativeAppKey: Config().nativeAppKey,
+  //   javaScriptAppKey: Config().javascriptAppKey,
+  // );
+  runApp(ProviderScope(observers: [RiverpodLogger()], child: const MyApp()));
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulHookConsumerWidget {
   const MyApp({super.key});
 
   @override
+  ConsumerState<ConsumerStatefulWidget> createState() => _MyAppState();
+}
+
+class _MyAppState extends ConsumerState<MyApp> {
+  @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Serverpod Demo',
+    return MaterialApp.router(
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: const MyHomePage(title: 'Serverpod Example'),
-    );
-  }
-}
-
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  final String title;
-
-  @override
-  MyHomePageState createState() => MyHomePageState();
-}
-
-class MyHomePageState extends State<MyHomePage> {
-  // These fields hold the last result or error message that we've received from
-  // the server or null if no result exists yet.
-  String? _resultMessage;
-  String? _errorMessage;
-
-  final _textEditingController = TextEditingController();
-
-  // Calls the `hello` method of the `example` endpoint. Will set either the
-  // `_resultMessage` or `_errorMessage` field, depending on if the call
-  // is successful.
-  void _callHello() async {
-    try {
-      var note = Note(name: _textEditingController.text, data: 0, text: 'text');
-      await client.example.createNote(note);
-      var notes = await client.example.getAllNotes();
-
-      // final result = await client.example.hello(_textEditingController.text);
-      setState(() {
-        _errorMessage = null;
-        _resultMessage = notes.first.name;
-      });
-    } catch (e) {
-      setState(() {
-        _errorMessage = '$e';
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16.0),
-              child: TextField(
-                controller: _textEditingController,
-                decoration: const InputDecoration(
-                  hintText: 'Enter your name',
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16.0),
-              child: ElevatedButton(
-                onPressed: _callHello,
-                child: const Text('Send to Server'),
-              ),
-            ),
-            _ResultDisplay(
-              resultMessage: _resultMessage,
-              errorMessage: _errorMessage,
-            ),
-          ],
+        // scaffoldBackgroundColor: AppColors.whiteColor,
+        // colorScheme: ColorScheme.fromSeed(seedColor: AppColors.whiteColor),
+        // popupMenuTheme: PopupMenuThemeData(
+        //   color: AppColors.whiteColor, // Background color
+        //   textStyle: const TextStyle(color: AppColors.whiteColor), // Text color
+        //   elevation: 4, // Elevation
+        //   shadowColor: Colors.black.withOpacity(0.6), // Shadow color
+        //   shape: RoundedRectangleBorder(
+        //     borderRadius: BorderRadius.circular(12), // Border radijs
+        //   ),
+        // ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+        ),
+        textTheme: const TextTheme(
+          titleLarge: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
+          ),
+          titleMedium: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
+          ),
+          titleSmall: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.black,
+          ),
+          bodyLarge: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
+            color: Colors.black,
+          ),
+          bodyMedium: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
+            color: Colors.black,
+          ),
+          bodySmall: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w400,
+            color: Colors.black,
+          ),
+          labelSmall: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w400,
+            color: Colors.black,
+          ),
+        ),
+        scaffoldBackgroundColor: Colors.white,
+        dialogBackgroundColor: Theme.of(context).colorScheme.surface,
+        dividerColor: const Color(0xffe0e0e0),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF7772AC),
+          // onPrimary: const Color(0xFF7772AC),
+          primary: const Color.fromARGB(255, 24, 24, 24),
+          onPrimary: Colors.white,
+          onPrimaryContainer: const Color(0xFF4B5A76),
+          primaryContainer: const Color(0xFFEFEFF9),
+          surface: const Color(0xFFA6A6A6),
+          // onSurface: const Color(0xFFF4F9F8),
+          onSecondary: const Color(0xFF787878),
+          onSecondaryContainer: const Color(0xFFEFEEF9),
+          onTertiaryContainer: const Color(0xFF7773AC),
+          onTertiary: const Color(0xffF8BD26),
+          error: const Color.fromARGB(255, 245, 64, 55),
+          onSurfaceVariant: const Color(0xff746A8F),
+          tertiary: const Color(0xFFDDf1ED),
+          inversePrimary: const Color(0xFFD9D9D9),
+          inverseSurface: const Color(0xFFEEEEEE),
         ),
       ),
-    );
-  }
-}
-
-// _ResultDisplays shows the result of the call. Either the returned result from
-// the `example.hello` endpoint method or an error message.
-class _ResultDisplay extends StatelessWidget {
-  final String? resultMessage;
-  final String? errorMessage;
-
-  const _ResultDisplay({
-    this.resultMessage,
-    this.errorMessage,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    String text;
-    Color backgroundColor;
-    if (errorMessage != null) {
-      backgroundColor = Colors.red[300]!;
-      text = errorMessage!;
-    } else if (resultMessage != null) {
-      backgroundColor = Colors.green[300]!;
-      text = resultMessage!;
-    } else {
-      backgroundColor = Colors.grey[300]!;
-      text = 'No server response yet.';
-    }
-
-    return Container(
-      height: 50,
-      color: backgroundColor,
-      child: Center(
-        child: Text(text),
-      ),
+      routerConfig: ref.watch(routeProvider),
     );
   }
 }
